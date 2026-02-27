@@ -1,0 +1,26 @@
+# Root .gitignore for Prolink
+
+# Ignore backend-specific sensitive files if they exist in root
+backend/.env
+backend/vendor
+backend/storage/*.key
+backend/public/storage
+backend/bootstrap/cache/*
+backend/node_modules
+
+# Ignore mobile-specific files
+mobile/.dart_tool/
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/ios/.generated/
+mobile/android/.gradle/
+mobile/local.properties
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
