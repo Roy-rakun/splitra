@@ -1,4 +1,4 @@
-package com.example.mobile_tmp
+package com.splitra.lst
 
 import io.flutter.embedding.android.FlutterActivity
 

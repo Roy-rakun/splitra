@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
-import 'package:mobile_tmp/utils/theme.dart';
+import 'package:splitra_lst/utils/theme.dart';
 
 class GroupDetailScreen extends StatelessWidget {
   const GroupDetailScreen({Key? key}) : super(key: key);

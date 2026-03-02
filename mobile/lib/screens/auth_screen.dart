@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:mobile_tmp/utils/theme.dart';
+import 'package:splitra_lst/utils/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import 'main_screen.dart';
@@ -145,7 +145,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
               
               const SizedBox(height: 24),
-              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                   Text(
+                      isLogin ? 'Don\'t have an account? ' : 'Already have an account? ',
+                      style: GoogleFonts.inter(color: AppTheme.greyText),
+                  ),
                   GestureDetector(
                     onTap: () {
                       setState(() {
@@ -156,7 +162,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       isLogin ? 'Sign Up' : 'Sign In',
                       style: GoogleFonts.inter(color: AppTheme.primaryPink, fontWeight: FontWeight.bold),
                     ),
-                  )
+                  ),
                 ],
               ),
             ],

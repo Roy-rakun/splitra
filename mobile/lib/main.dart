@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'utils/theme.dart';
 import 'screens/splash_screen.dart';
 
-import 'package:mobile_tmp/services/notification_service.dart';
+import 'package:splitra_lst/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

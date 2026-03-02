@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:mobile_tmp/utils/theme.dart';
+import 'package:splitra_lst/utils/theme.dart';
 import 'split_order_screen.dart';
 
 class ReviewReceiptScreen extends StatefulWidget {
@@ -86,7 +86,7 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
                 ...scannedItems.map((item) => _buildItemRow(item)).toList(),
                 
                 const SizedBox(height: 24),
-                Divider(color: Colors.grey.shade300, thickness: 1.5, style: BorderStyle.none),
+                const Divider(color: Colors.grey, thickness: 1.5),
                 const SizedBox(height: 24),
                 
                 Text("Additional", style: GoogleFonts.inter(color: AppTheme.navyDark, fontWeight: FontWeight.bold, fontSize: 16)),

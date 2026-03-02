@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:mobile_tmp/utils/theme.dart';
-import 'package:mobile_tmp/services/api_service.dart';
+import 'package:splitra_lst/utils/theme.dart';
+import 'package:splitra_lst/services/api_service.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'review_receipt_screen.dart';
 import 'dart:convert';

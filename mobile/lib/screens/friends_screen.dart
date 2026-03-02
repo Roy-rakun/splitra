@@ -4,18 +4,19 @@ import 'package:ionicons/ionicons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:convert';
 import '../services/api_service.dart';
-import '../theme/app_theme.dart';
+import 'package:splitra_lst/utils/theme.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class FriendsScreen extends StatefulWidget {
+class FriendsScreen extends ConsumerStatefulWidget {
   const FriendsScreen({Key? key}) : super(key: key);
 
   @override
-  State<FriendsScreen> createState() => _FriendsScreenState();
+  ConsumerState<FriendsScreen> createState() => _FriendsScreenState();
 }
 
-class _FriendsScreenState extends State<FriendsScreen> {
+class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<dynamic> _searchResults = [];
   List<dynamic> _myFriends = [];

@@ -13,16 +13,20 @@ class NotificationService {
       android: initializationSettingsAndroid,
     );
 
+    // Definitive named parameter usage for v20.1.0 (settings: instead of positional)
     await _notificationsPlugin.initialize(
-      initializationSettings,
+      settings: initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         debugPrint('Notifikasi diklik: ${response.payload}');
       },
     );
 
     // Minta izin untuk Android 13+
-    _notificationsPlugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+    final androidPlugin = _notificationsPlugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      await androidPlugin.requestNotificationsPermission();
+    }
   }
 
   static Future<void> showNotification({
@@ -31,15 +35,14 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
-    // Definisi channel khusus untuk suara notif.wav
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'splitra_payment_channel', // Id unik channel
-      'Payment Notifications', // Nama channel
+      'splitra_payment_channel',
+      'Payment Notifications',
       channelDescription: 'Notifikasi konfirmasi pembayaran partisipan',
       importance: Importance.max,
       priority: Priority.high,
-      sound: RawResourceAndroidNotificationSound('notif'), // Memanfaatkan notif.wav di res/raw
+      sound: RawResourceAndroidNotificationSound('notif'),
       playSound: true,
       enableVibration: true,
     );
@@ -47,11 +50,12 @@ class NotificationService {
     const NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
+    // Definitive named parameters for v20.1.0
     await _notificationsPlugin.show(
-      id,
-      title,
-      body,
-      platformChannelSpecifics,
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: platformChannelSpecifics,
       payload: payload,
     );
   }

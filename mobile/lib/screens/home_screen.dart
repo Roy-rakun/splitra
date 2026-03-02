@@ -3,13 +3,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../utils/theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:splitra_lst/providers/auth_provider.dart';
 
-import 'package:mobile_tmp/services/api_service.dart';
+import 'package:splitra_lst/services/api_service.dart';
 import 'dart:convert';
-import 'package:mobile_tmp/screens/scanner_screen.dart';
-import 'package:mobile_tmp/screens/recent_activity_screen.dart';
-import 'package:mobile_tmp/screens/friends_screen.dart';
-import 'package:mobile_tmp/screens/pricing_screen.dart';
+import 'package:splitra_lst/screens/scanner_screen.dart';
+import 'package:splitra_lst/screens/recent_activity_screen.dart';
+import 'package:splitra_lst/screens/friends_screen.dart';
+import 'package:splitra_lst/screens/pricing_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -74,7 +76,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
         ),
-      ),
       ),
     );
   }

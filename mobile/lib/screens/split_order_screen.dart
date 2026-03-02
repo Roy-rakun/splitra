@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:mobile_tmp/utils/theme.dart';
-import 'package:mobile_tmp/screens/bill_detail_screen.dart';
-import 'package:mobile_tmp/services/api_service.dart';
+import 'package:splitra_lst/utils/theme.dart';
+import 'package:splitra_lst/screens/bill_detail_screen.dart';
+import 'package:splitra_lst/services/api_service.dart';
 import 'dart:convert';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:splitra_lst/screens/shared_bill_screen.dart';
 class SplitOrderScreen extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>>? scannedItems;
   final double? tax;
@@ -404,7 +406,7 @@ class _SplitOrderScreenState extends ConsumerState<SplitOrderScreen> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (c) => const SharedBillScreen()),
+              MaterialPageRoute(builder: (c) => SharedBillScreen()),
             );
           },
           style: ElevatedButton.styleFrom(

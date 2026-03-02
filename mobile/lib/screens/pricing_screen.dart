@@ -2,19 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:mobile_tmp/utils/theme.dart';
-import 'package:mobile_tmp/services/api_service.dart';
+import 'package:splitra_lst/utils/theme.dart';
+import 'package:splitra_lst/services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_widget_from_html/flutter_widget_from_html.dart'; // Aktifkan jika sudah pub get
 import 'dart:convert';
 
-class PricingScreen extends StatefulWidget {
+class PricingScreen extends ConsumerStatefulWidget {
   const PricingScreen({Key? key}) : super(key: key);
-
   @override
-  State<PricingScreen> createState() => _PricingScreenState();
+  ConsumerState<PricingScreen> createState() => _PricingScreenState();
 }
-
-class _PricingScreenState extends State<PricingScreen> with SingleTickerProviderStateMixin {
+class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTickerProviderStateMixin {
   List<dynamic> allPlans = [];
   bool isLoading = true;
   late TabController _tabController;

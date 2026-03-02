@@ -3,9 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
 import 'dart:convert';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:mobile_tmp/utils/theme.dart';
+import 'package:splitra_lst/utils/theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mobile_tmp/services/api_service.dart';
+import 'package:splitra_lst/services/api_service.dart';
 
 class SharedBillScreen extends StatefulWidget {
   const SharedBillScreen({Key? key}) : super(key: key);

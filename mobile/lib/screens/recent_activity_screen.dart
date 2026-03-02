@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:mobile_tmp/utils/theme.dart';
-import 'package:mobile_tmp/services/notification_service.dart';
+import 'package:splitra_lst/utils/theme.dart';
+import 'package:splitra_lst/services/notification_service.dart';
 
 class RecentActivityScreen extends StatefulWidget {
   const RecentActivityScreen({Key? key}) : super(key: key);

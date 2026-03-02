@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -20,13 +21,25 @@ class AuthState {
   }
 }
 
-class AuthNotifier extends StateNotifier<AuthState> {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-  );
+class AuthNotifier extends Notifier<AuthState> {
+  // Definitive singleton usage for google_sign_in 7.2.0
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
-  AuthNotifier() : super(AuthState()) {
-    _loadUser();
+  @override
+  AuthState build() {
+    _initAndLoad();
+    return AuthState();
+  }
+
+  Future<void> _initAndLoad() async {
+    try {
+      // Inisialisasi wajib untuk v7.2+
+      await _googleSignIn.initialize();
+      await _loadUser();
+    } catch (e) {
+      debugPrint('Error init auth: $e');
+      await _loadUser();
+    }
   }
 
   Future<void> _loadUser() async {
@@ -34,15 +47,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final token = prefs.getString('auth_token');
     if (token != null) {
       try {
-        final response = await ApiService.get('/user'); // Asumsi endpoint auth backend return profil
+        final response = await ApiService.get('/user');
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
-          this.state = this.state.copyWith(user: data);
+          state = state.copyWith(user: data);
         } else {
           await logout();
         }
       } catch (e) {
-        this.state = this.state.copyWith(error: e.toString());
+        state = state.copyWith(error: e.toString());
       }
     }
   }
@@ -66,7 +79,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       } else {
         final data = jsonDecode(response.body);
-        this.state = this.state.copyWith(isLoading: false, error: data['message'] ?? 'Login failed');
+        state = state.copyWith(isLoading: false, error: data['message'] ?? 'Login failed');
         return false;
       }
     } catch (e) {
@@ -78,17 +91,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> loginWithGoogle() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final googleAccount = await _googleSignIn.signIn();
-      if (googleAccount == null) {
-        this.state = this.state.copyWith(isLoading: false);
-        return false;
-      }
-
-      final googleAuth = await googleAccount.authentication;
-      final accessToken = googleAuth.accessToken;
+      // authenticate() menggantikan signIn() di v7.2+
+      final googleAccount = await _googleSignIn.authenticate(
+        scopeHint: ['email', 'profile'],
+      );
+      
+      // Ambil accessToken via authorizationClient
+      final authz = await googleAccount.authorizationClient.authorizeScopes(['email', 'profile']);
+      final accessToken = authz.accessToken;
 
       if (accessToken == null) {
-        this.state = this.state.copyWith(isLoading: false, error: "Gagal mendapatkan access token dari Google");
+        state = state.copyWith(isLoading: false, error: "Gagal mendapatkan access token dari Google");
         return false;
       }
 
@@ -107,7 +120,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       } else {
         final data = jsonDecode(response.body);
-        this.state = this.state.copyWith(isLoading: false, error: data['message'] ?? 'Login Google gagal');
+        state = state.copyWith(isLoading: false, error: data['message'] ?? 'Login Google gagal');
         return false;
       }
     } catch (e) {
@@ -117,7 +130,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<bool> register(String name, String email, String password) async {
-    this.state = this.state.copyWith(isLoading: true, clearError: true);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       final response = await ApiService.post('/register', {
         'name': name,
@@ -137,7 +150,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       } else {
         final data = jsonDecode(response.body);
-        this.state = this.state.copyWith(isLoading: false, error: data['message'] ?? 'Registration failed');
+        state = state.copyWith(isLoading: false, error: data['message'] ?? 'Registration failed');
         return false;
       }
     } catch (e) {
@@ -147,7 +160,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    this.state = this.state.copyWith(isLoading: true);
+    state = state.copyWith(isLoading: true);
     try {
       await ApiService.post('/logout', {});
     } catch (_) {}
@@ -155,7 +168,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     
-    this.state = AuthState(); // Reset state
+    state = AuthState(); // Reset state
   }
 
   Future<bool> uploadAvatar(String imagePath) async {
@@ -166,7 +179,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // data['data'] berisi profil yang terupdate
         state = state.copyWith(isLoading: false, user: data['data']);
         return true;
       } else {
@@ -207,6 +219,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+final authProvider = NotifierProvider<AuthNotifier, AuthState>(() {
   return AuthNotifier();
 });

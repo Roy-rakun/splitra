@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:mobile_tmp/utils/theme.dart';
+import 'package:splitra_lst/utils/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart' as shared_preferences;
 import 'auth_screen.dart';
 import 'main_screen.dart' as main_screen;
