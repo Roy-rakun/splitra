@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:splitra_lst/utils/theme.dart';
 import 'package:splitra_lst/services/api_service.dart';
 import 'dart:convert';
-import 'package:share_plus/share_plus.dart';
 
 class ExportDataScreen extends StatefulWidget {
   const ExportDataScreen({Key? key}) : super(key: key);
@@ -36,7 +36,13 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
           csv += "${bill['id']},${bill['merchant_name']},${bill['total']},${bill['created_at'].toString().split('T')[0]}\n";
         }
 
-        await Share.share(csv, subject: 'Splitra Export Data (CSV)');
+        // Copy to clipboard (web-compatible)
+        await Clipboard.setData(ClipboardData(text: csv));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("✅ Data CSV disalin ke clipboard! Tempelkan ke Excel atau Google Sheets."), backgroundColor: AppTheme.successGreen),
+          );
+        }
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal ekspor: $e")));

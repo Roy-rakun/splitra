@@ -222,9 +222,8 @@ class _RecentActivityScreenState extends State<RecentActivityScreen> with Single
                   width: double.infinity,
                   child: Stack(
                     children: [
-                       ...(item['participants'] as List? ?? []).take(3).asMap().entries.map((entry) {
-                         return _buildAvatar(entry.key * 15.0, 'https://ui-avatars.com/api/?name=${entry.value['name']}&background=random'
-);
+                       ...(item['participants'] as List? ?? []).take(3).toList().asMap().entries.map((entry) {
+                         return _buildAvatar(entry.key * 15.0, 'https://ui-avatars.com/api/?name=${entry.value['name']}&background=random');
                        }).toList(),
                     ],
                   ),

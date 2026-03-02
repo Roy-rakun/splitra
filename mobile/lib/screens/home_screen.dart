@@ -357,7 +357,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             height: 40,
             child: Stack(
               children: [
-                ...(bill['participants'] as List).take(4).asMap().entries.map((entry) {
+                ...(bill['participants'] as List).take(4).toList().asMap().entries.map((entry) {
                    return _buildAvatarStack(entry.key * 25.0, 'https://ui-avatars.com/api/?name=${entry.value['name']}&background=random');
                 }).toList(),
                 if ((bill['participants'] as List).length > 4)

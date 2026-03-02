@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:splitra_lst/utils/formatters.dart';
 import 'package:ionicons/ionicons.dart';
