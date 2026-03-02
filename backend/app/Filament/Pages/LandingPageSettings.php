@@ -181,6 +181,20 @@ class LandingPageSettings extends Page
                             ->label('Link Instagram')
                             ->placeholder('https://instagram.com/...')
                             ->url(),
+                    ]),
+                Section::make('YoGateway Configuration')
+                    ->description('Kredensial untuk integrasi Payment Gateway YoGateway.')
+                    ->schema([
+                        TextInput::make('yogateway_api_key')
+                            ->label('YoGateway API Key')
+                            ->password()
+                            ->revealable()
+                            ->placeholder('Masukkan API Key dari Dashboard YoGateway'),
+                        TextInput::make('yogateway_secret')
+                            ->label('YoGateway Secret / Signature Key')
+                            ->password()
+                            ->revealable()
+                            ->placeholder('Masukkan Secret Key dari Dashboard YoGateway'),
                     ])
             ])
             ->statePath('data');

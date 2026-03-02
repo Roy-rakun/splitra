@@ -21,6 +21,7 @@ Route::post('/settlement/{id}/upload-proof', [SettlementController::class, 'uplo
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/plans/upgrade', [\App\Http\Controllers\PlanController::class, 'upgrade']);
+    Route::post('/payment/initiate', [\App\Http\Controllers\PaymentController::class, 'initiate']);
     
     // Core Bills (Pembuat)
     Route::post('/bills/parse', [\App\Http\Controllers\BillParserController::class, 'parseReceipt']);
@@ -62,3 +63,5 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', [\App\Http\Controllers\GroupController::class, 'destroy']);
     });
 });
+
+Route::post('/payment/callback', [\App\Http\Controllers\PaymentController::class, 'handleWebhook']);

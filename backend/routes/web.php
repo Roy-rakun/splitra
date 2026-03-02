@@ -35,6 +35,10 @@ Route::get('/', function () {
     return view('welcome', compact('settings', 'plansMonthly', 'plansYearly', 'plansLifetime'));
 });
 
+Route::get('/payment/success', function () {
+    return view('payment.success');
+})->name('payment.success');
+
 Route::get('/comparison', function () {
     $settings = Setting::pluck('value', 'key')->toArray();
     

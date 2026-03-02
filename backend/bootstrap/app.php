@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'plan_check' => \App\Http\Middleware\PlanRestrictionMiddleware::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            '/api/payment/callback',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
