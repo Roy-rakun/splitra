@@ -70,7 +70,7 @@ class BillDetailScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomActions(),
+      bottomNavigationBar: _buildBottomActions(context),
     );
   }
 
@@ -199,7 +199,7 @@ class BillDetailScreen extends StatelessWidget {
                   _buildReceiptRow('Matcha Grande', 'x 1', '\$12.25'),
                   _buildReceiptRow('Muffin Blueberry, Reguler', 'x 1', '\$15.13'),
                   const SizedBox(height: 16),
-                  Divider(color: Colors.grey.shade200, style: BorderStyle.none),
+                  const Divider(color: Colors.grey),
                   _buildReceiptRow('Tax', '', '\$2.73', isFaint: true),
                   _buildReceiptRow('Services Fee', '', '\$2.00', isFaint: true),
                   _buildReceiptRow('Discounts', '', '0', isFaint: true),
@@ -227,7 +227,7 @@ class BillDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomActions() {
+  Widget _buildBottomActions(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(color: AppTheme.backgroundWhite),
@@ -239,7 +239,7 @@ class BillDetailScreen extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SharedBillScreen()),
+                MaterialPageRoute(builder: (c) => const SharedBillScreen()),
               );
             },
             style: ElevatedButton.styleFrom(

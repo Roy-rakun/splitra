@@ -37,12 +37,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final response = await ApiService.get('/user'); // Asumsi endpoint auth backend return profil
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
-          state = state.copyWith(user: data);
+          this.state = this.state.copyWith(user: data);
         } else {
           await logout();
         }
       } catch (e) {
-        state = state.copyWith(error: e.toString());
+        this.state = this.state.copyWith(error: e.toString());
       }
     }
   }
@@ -66,7 +66,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       } else {
         final data = jsonDecode(response.body);
-        state = state.copyWith(isLoading: false, error: data['message'] ?? 'Login failed');
+        this.state = this.state.copyWith(isLoading: false, error: data['message'] ?? 'Login failed');
         return false;
       }
     } catch (e) {
@@ -80,7 +80,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final googleAccount = await _googleSignIn.signIn();
       if (googleAccount == null) {
-        state = state.copyWith(isLoading: false);
+        this.state = this.state.copyWith(isLoading: false);
         return false;
       }
 
@@ -88,7 +88,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final accessToken = googleAuth.accessToken;
 
       if (accessToken == null) {
-        state = state.copyWith(isLoading: false, error: "Gagal mendapatkan access token dari Google");
+        this.state = this.state.copyWith(isLoading: false, error: "Gagal mendapatkan access token dari Google");
         return false;
       }
 
@@ -107,7 +107,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       } else {
         final data = jsonDecode(response.body);
-        state = state.copyWith(isLoading: false, error: data['message'] ?? 'Login Google gagal');
+        this.state = this.state.copyWith(isLoading: false, error: data['message'] ?? 'Login Google gagal');
         return false;
       }
     } catch (e) {
@@ -117,7 +117,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<bool> register(String name, String email, String password) async {
-    state = state.copyWith(isLoading: true, clearError: true);
+    this.state = this.state.copyWith(isLoading: true, clearError: true);
     try {
       final response = await ApiService.post('/register', {
         'name': name,
@@ -137,7 +137,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       } else {
         final data = jsonDecode(response.body);
-        state = state.copyWith(isLoading: false, error: data['message'] ?? 'Registration failed');
+        this.state = this.state.copyWith(isLoading: false, error: data['message'] ?? 'Registration failed');
         return false;
       }
     } catch (e) {
@@ -147,7 +147,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    state = state.copyWith(isLoading: true);
+    this.state = this.state.copyWith(isLoading: true);
     try {
       await ApiService.post('/logout', {});
     } catch (_) {}
@@ -155,7 +155,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     
-    state = AuthState(); // Reset state
+    this.state = AuthState(); // Reset state
   }
 
   Future<bool> uploadAvatar(String imagePath) async {

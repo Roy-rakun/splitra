@@ -52,11 +52,6 @@ class _SplitOrderScreenState extends ConsumerState<SplitOrderScreen> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadFriends();
-  }
 
   Future<void> _loadFriends() async {
     try {
@@ -405,21 +400,18 @@ class _SplitOrderScreenState extends ConsumerState<SplitOrderScreen> {
         ]
       ),
       child: SafeArea(
-        child: SizedBox(
-          width: double.infinity,
-          height: 56,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const BillDetailScreen()),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryPink, // Tadi successGreen, tapi direferensi pake pink
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text('Split Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (c) => const SharedBillScreen()),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryPink,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
+          child: const Text('Split Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         ),
       ),
     );

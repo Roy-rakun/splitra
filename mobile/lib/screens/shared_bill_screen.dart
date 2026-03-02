@@ -361,7 +361,7 @@ class _SharedBillScreenState extends State<SharedBillScreen> {
                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
              ),
            ),
-         ).animate().fadeIn(delay: 350.ms).slideScale(),
+         ).animate().fadeIn(delay: 350.ms).slide().scale(),
          const SizedBox(height: 12),
          SizedBox(
            width: double.infinity,
@@ -375,7 +375,7 @@ class _SharedBillScreenState extends State<SharedBillScreen> {
                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
              ),
            ),
-         ).animate().fadeIn(delay: 450.ms).slideScale(),
+         ).animate().fadeIn(delay: 450.ms).slide().scale(),
        ]
      );
   }
