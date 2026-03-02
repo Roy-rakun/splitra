@@ -6,12 +6,18 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\SettlementController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\DashboardController;
 
 // Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/auth/google', [AuthController::class, 'loginWithGoogle']);
 Route::get('/plans', [\App\Http\Controllers\PlanController::class, 'index']); // Public discovery
+Route::get('/settings/public', function() {
+    return response()->json([
+        'google_client_id' => \App\Models\Setting::where('key', 'google_client_id')->first()?->value,
+    ]);
+});
 Route::post('/coupons/validate', [\App\Http\Controllers\Api\CouponController::class, 'validateCoupon']);
 
 // Seamless Checkout via Unique Code (Public, Tanpa Auth)
@@ -23,14 +29,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/plans/upgrade', [\App\Http\Controllers\PlanController::class, 'upgrade']);
     Route::post('/payment/initiate', [\App\Http\Controllers\PaymentController::class, 'initiate']);
     
+    // Dashboard
+    Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+    Route::get('/dashboard/activity', [DashboardController::class, 'activity']);
+    
     // Core Bills (Pembuat)
     Route::post('/bills/parse', [\App\Http\Controllers\BillParserController::class, 'parseReceipt']);
     Route::get('/bills', [BillController::class, 'index']);
     Route::post('/bills', [BillController::class, 'store']);
     
     // Profile
+    Route::get('/user', [AuthController::class, 'me']);
     Route::post('/profile/upload', [AuthController::class, 'uploadAvatar']);
     Route::put('/profile/payment-methods', [AuthController::class, 'updatePaymentMethods']);
+    Route::post('/profile/change-password', [AuthController::class, 'changePassword']);
     
     
     // Auth-Protected Settlement Status Update (Owner Update)
@@ -43,6 +55,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/settlement/{id}/generate-reminder', [\App\Http\Controllers\AiAssistantController::class, 'generateReminder'])->middleware('plan_check:auto_reminder_email');
 
     // Expense
+    Route::get('/expenses', [ExpenseController::class, 'index']);
+    Route::get('/expenses/stats', [ExpenseController::class, 'stats']);
     Route::post('/expenses', [ExpenseController::class, 'store']);
     Route::post('/expenses/{id}/upload-receipt', [ExpenseController::class, 'uploadReceipt']);
     
@@ -62,6 +76,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/members', [\App\Http\Controllers\GroupController::class, 'addMember']);
         Route::delete('/{id}', [\App\Http\Controllers\GroupController::class, 'destroy']);
     });
+    
+    // FAQ Route
+    Route::get('/faqs', [\App\Http\Controllers\FaqController::class, 'index']);
 });
 
 Route::post('/payment/callback', [\App\Http\Controllers\PaymentController::class, 'handleWebhook']);

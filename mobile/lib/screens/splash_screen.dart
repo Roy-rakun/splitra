@@ -51,7 +51,16 @@ class _SplashScreenState extends State<SplashScreen> {
                 gradient: AppTheme.primaryGradient,
                 borderRadius: BorderRadius.circular(32),
               ),
-              child: const Icon(Icons.receipt_long, color: Colors.white, size: 50),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(32),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(Icons.receipt_long, color: Colors.white, size: 50);
+                  },
+                ),
+              ),
             ).animate()
              .scaleXY(begin: 0.8, end: 1.0, duration: 600.ms, curve: Curves.easeOutBack)
              .fadeIn(duration: 600.ms),

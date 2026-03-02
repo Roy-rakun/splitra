@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:splitra_lst/utils/theme.dart';
+import 'package:splitra_lst/utils/formatters.dart';
 import 'package:splitra_lst/services/api_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_widget_from_html/flutter_widget_from_html.dart'; // Aktifkan jika sudah pub get
@@ -234,9 +235,6 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
   }
 
   String _formatPrice(dynamic price) {
-    if (price == 0) return "0";
-    String p = price.toString();
-    if (p.contains('.')) p = p.split('.')[0];
-    return p.replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    return CurrencyFormatter.format(price).replaceFirst('Rp ', '');
   }
 }

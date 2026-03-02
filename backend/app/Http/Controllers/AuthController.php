@@ -39,10 +39,11 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        try {
+            $request->validate([
+                'email' => 'required|email',
+                'password' => 'required',
+            ]);
 
         $user = User::where('email', $request->email)->first();
 
@@ -52,6 +53,12 @@ class AuthController extends Controller
             ]);
         }
 
+        if ($user->status === 'Suspended') {
+            return response()->json([
+                'message' => 'Akun Anda ditangguhkan (Suspended). Silakan hubungi admin.',
+            ], 403);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -59,6 +66,16 @@ class AuthController extends Controller
             'token' => $token,
             'user' => $user
         ]);
+        } catch (\Exception $e) {
+            \Log::error('Login Error: ' . $e->getMessage(), [
+                'email' => $request->email,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'message' => 'Terjadi kesalahan pada server',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -67,12 +84,38 @@ class AuthController extends Controller
     public function loginWithGoogle(Request $request)
     {
         $request->validate([
-            'access_token' => 'required',
+            'access_token' => 'required_without:id_token',
+            'id_token' => 'required_without:access_token',
         ]);
 
         try {
-            // Verifikasi token via Socialite
-            $googleUser = Socialite::driver('google')->userFromToken($request->access_token);
+            $googleUser = null;
+
+            if ($request->has('id_token')) {
+                // Verifikasi ID Token via Google API (Untuk Web/GIS)
+                $response = \Illuminate\Support\Facades\Http::get("https://oauth2.googleapis.com/tokeninfo", [
+                    'id_token' => $request->id_token
+                ]);
+
+                if (!$response->successful()) {
+                    return response()->json(['message' => 'Invalid Google ID Token'], 401);
+                }
+
+                $tokenData = $response->json();
+                
+                // Mocking Socialite User object structure
+                $googleUser = new class($tokenData) {
+                    private $data;
+                    public function __construct($data) { $this->data = $data; }
+                    public function getId() { return $this->data['sub']; }
+                    public function getEmail() { return $this->data['email']; }
+                    public function getName() { return $this->data['name'] ?? explode('@', $this->data['email'])[0]; }
+                    public function getAvatar() { return $this->data['picture'] ?? null; }
+                };
+            } else {
+                // Verifikasi access_token via Socialite (Untuk Mobile)
+                $googleUser = Socialite::driver('google')->userFromToken($request->access_token);
+            }
             
             // Cari user berdasarkan google_id atau email
             $user = User::where('google_id', $googleUser->getId())
@@ -86,7 +129,7 @@ class AuthController extends Controller
                     'email' => $googleUser->getEmail(),
                     'google_id' => $googleUser->getId(),
                     'avatar_url' => $googleUser->getAvatar(),
-                    'password' => null, // Password nullable for OAuth users
+                    'password' => null,
                     'plan' => 'Free',
                     'status' => 'Active'
                 ]);
@@ -100,6 +143,12 @@ class AuthController extends Controller
                 }
             }
 
+            if ($user->status === 'Suspended') {
+                return response()->json([
+                    'message' => 'Akun Anda ditangguhkan (Suspended). Silakan hubungi admin.',
+                ], 403);
+            }
+
             $token = $user->createToken('auth_token')->plainTextToken;
 
             return response()->json([
@@ -109,10 +158,13 @@ class AuthController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('Google Login Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
-                'message' => 'Gagal verifikasi Google token',
+                'message' => 'Gagal verifikasi Google token atau terjadi kesalahan server',
                 'error' => $e->getMessage()
-            ], 401);
+            ], 500);
         }
     }
 
@@ -123,6 +175,32 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Logout berhasil'
         ]);
+    }
+
+    public function me(Request $request)
+    {
+        return response()->json([
+            'data' => $request->user()
+        ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'old_password' => 'required',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->old_password, $user->password)) {
+            return response()->json(['message' => 'Kata sandi lama salah'], 422);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json(['message' => 'Kata sandi berhasil diperbarui']);
     }
 
     public function uploadAvatar(Request $request)

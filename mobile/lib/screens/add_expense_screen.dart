@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:splitra_lst/utils/theme.dart';
+import 'package:splitra_lst/services/api_service.dart';
+import 'dart:convert';
 
 class AddExpenseScreen extends StatefulWidget {
   final Map<String, dynamic>? parsedData;
@@ -15,6 +17,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
   String _selectedCategory = 'Food & Dining';
+  DateTime _selectedDate = DateTime.now();
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -25,6 +29,37 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       }
       if (widget.parsedData!['merchant'] != null) {
         _noteController.text = widget.parsedData!['merchant'];
+      }
+    }
+  }
+
+  Future<void> _saveExpense() async {
+    if (_amountController.text.isEmpty) return;
+    
+    setState(() => _isLoading = true);
+    try {
+      final response = await ApiService.post('/expenses', {
+        'title': _noteController.text.isEmpty ? "Untitled Expense" : _noteController.text,
+        'amount': double.tryParse(_amountController.text) ?? 0,
+        'expense_date': _selectedDate.toIso8601String().split('T')[0],
+        'notes': _noteController.text,
+        'category_name': _selectedCategory,
+      });
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Pengeluaran berhasil dicatat!"), backgroundColor: AppTheme.successGreen));
+          Navigator.pop(context, true);
+        } else {
+          final data = jsonDecode(response.body);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? "Gagal menyimpan"), backgroundColor: AppTheme.primaryRed));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: AppTheme.primaryRed));
       }
     }
   }
@@ -59,11 +94,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                        child: TextField(
                          controller: _amountController,
                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                         textAlign: TextAlign.center,
                          style: GoogleFonts.inter(color: AppTheme.navyDark, fontSize: 40, fontWeight: FontWeight.w900),
                          decoration: InputDecoration(
                             border: InputBorder.none,
-                            hintText: "0.00",
-                            prefixText: "\$ ",
+                            hintText: "0",
+                            prefixText: "Rp ",
                             prefixStyle: GoogleFonts.inter(color: AppTheme.navyDark, fontSize: 40, fontWeight: FontWeight.w900),
                          ),
                        ),
@@ -80,10 +116,25 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                const SizedBox(height: 24),
                
                _buildFieldLabel("Date"),
-               _buildTextField(hint: "12 Oct 2023", icon: Ionicons.calendar_outline),
+               InkWell(
+                 onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context, 
+                      initialDate: _selectedDate, 
+                      firstDate: DateTime(2000), 
+                      lastDate: DateTime(2100)
+                    );
+                    if (picked != null) setState(() => _selectedDate = picked);
+                 },
+                 child: _buildTextField(
+                   hint: "${_selectedDate.day} ${_selectedDate.month} ${_selectedDate.year}", 
+                   icon: Ionicons.calendar_outline,
+                   enabled: false,
+                 ),
+               ),
                const SizedBox(height: 24),
                
-               _buildFieldLabel("Note"),
+               _buildFieldLabel("Note (Merchant)"),
                _buildTextField(hint: "Dinner with clients", icon: Ionicons.document_text_outline, controller: _noteController),
             ],
          ),
@@ -94,12 +145,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           child: SizedBox(
             height: 56,
             child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: _isLoading ? null : _saveExpense,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.navyDark,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              child: const Text('Save Expense', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
+              child: _isLoading 
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text('Save Expense', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
             ),
           ),
         ),
@@ -114,11 +167,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
-  Widget _buildTextField({required String hint, required IconData icon, TextEditingController? controller}) {
+  Widget _buildTextField({required String hint, required IconData icon, TextEditingController? controller, bool enabled = true}) {
      return Container(
-        decoration: BoxDecoration(color: AppTheme.cardWhite, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
+        decoration: BoxDecoration(color: AppTheme.cardWhite, borderRadius: BorderRadius.circular(16), border: Border.all(color: enabled ? Colors.grey.shade200 : Colors.grey.shade100)),
         child: TextField(
            controller: controller,
+           enabled: enabled,
            decoration: InputDecoration(
               border: InputBorder.none,
               hintText: hint,
@@ -137,23 +191,39 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           isExpanded: true,
-          value: 'Food & Dining',
+          value: _selectedCategory,
           icon: const Icon(Ionicons.chevron_down, color: AppTheme.greyText),
           items: ['Food & Dining', 'Transport', 'Entertainment', 'Shopping', 'Others'].map((String value) {
             return DropdownMenuItem<String>(
               value: value,
               child: Row(
                  children: [
-                    const Icon(Ionicons.fast_food_outline, size: 20, color: Colors.orange),
+                    Icon(_getIconForCategory(value), size: 20, color: _getColorForCategory(value)),
                     const SizedBox(width: 12),
                     Text(value, style: GoogleFonts.inter(color: AppTheme.navyDark, fontWeight: FontWeight.w600)),
                  ],
               )
             );
           }).toList(),
-          onChanged: (_) {},
+          onChanged: (v) => setState(() => _selectedCategory = v!),
         ),
       ),
     );
+  }
+
+  IconData _getIconForCategory(String name) {
+    if (name.contains('Food')) return Ionicons.fast_food_outline;
+    if (name.contains('Transport')) return Ionicons.car_outline;
+    if (name.contains('Entertainment')) return Ionicons.game_controller_outline;
+    if (name.contains('Shopping')) return Ionicons.bag_handle_outline;
+    return Ionicons.grid_outline;
+  }
+
+  Color _getColorForCategory(String name) {
+    if (name.contains('Food')) return Colors.orange;
+    if (name.contains('Transport')) return Colors.blue;
+    if (name.contains('Entertainment')) return Colors.purple;
+    if (name.contains('Shopping')) return Colors.pink;
+    return Colors.grey;
   }
 }

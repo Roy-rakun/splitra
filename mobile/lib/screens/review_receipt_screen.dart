@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:splitra_lst/utils/formatters.dart';
 import 'package:splitra_lst/utils/theme.dart';
 import 'split_order_screen.dart';
 
@@ -102,7 +103,7 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text("Grand Total", style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text("\$${grandTotal.toStringAsFixed(2)}", style: GoogleFonts.inter(color: AppTheme.primaryPink, fontWeight: FontWeight.w900, fontSize: 20)),
+                      Text(CurrencyFormatter.format(grandTotal), style: GoogleFonts.inter(color: AppTheme.primaryPink, fontWeight: FontWeight.w900, fontSize: 20)),
                     ],
                   ),
                 ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.2),
@@ -168,13 +169,13 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
               children: [
                 Text(item['name'], style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppTheme.navyDark, fontSize: 14)),
                 const SizedBox(height: 4),
-                Text("@ \$${item['price'].toStringAsFixed(2)}", style: GoogleFonts.inter(fontSize: 12, color: AppTheme.greyText)),
+                Text("@ ${CurrencyFormatter.format(item['price'])}", style: GoogleFonts.inter(fontSize: 12, color: AppTheme.greyText)),
               ],
             ),
           ),
-          Text("\$${(item['qty'] * item['price']).toStringAsFixed(2)}", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.navyDark)),
+          Text(CurrencyFormatter.format(item['qty'] * item['price']), style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.navyDark)),
           const SizedBox(width: 8),
-          Icon(Ionicons.pencil, size: 16, color: AppTheme.greyText),
+          const Icon(Ionicons.pencil, size: 16, color: AppTheme.greyText),
         ],
       ),
     ).animate().fadeIn().slideX(begin: 0.1);
@@ -189,9 +190,9 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
           Text(label, style: GoogleFonts.inter(color: AppTheme.greyText, fontSize: 14)),
           Row(
             children: [
-              Text("\$${amount.toStringAsFixed(2)}", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppTheme.navyDark)),
+              Text(CurrencyFormatter.format(amount), style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppTheme.navyDark)),
               const SizedBox(width: 16),
-              Icon(Ionicons.pencil, size: 16, color: AppTheme.greyText),
+              const Icon(Ionicons.pencil, size: 16, color: AppTheme.greyText),
             ],
           )
         ],

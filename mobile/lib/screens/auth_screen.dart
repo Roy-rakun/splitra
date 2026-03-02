@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/google_sign_in_button.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -22,6 +24,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
     return Scaffold(
       backgroundColor: AppTheme.backgroundWhite,
       body: SafeArea(
@@ -37,7 +40,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   Container(
                      width: 60, height: 60,
                      decoration: BoxDecoration(gradient: AppTheme.primaryGradient, borderRadius: BorderRadius.circular(16)),
-                     child: const Icon(Icons.receipt_long, color: Colors.white, size: 32),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(Icons.receipt_long, color: Colors.white, size: 32);
+                          },
+                        ),
+                      ),
                   ),
                   const SizedBox(height: 24),
                   Text(
@@ -69,9 +81,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               const SizedBox(height: 16),
               _buildTextField(label: 'Password', hint: '••••••••', icon: Ionicons.lock_closed_outline, isPassword: true, controller: passwordCtrl),
 
-              if (ref.watch(authProvider).error != null) ...[
+               if (authState.error != null) ...[
                 const SizedBox(height: 8),
-                Text(ref.watch(authProvider).error!, style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold)),
+                Text(authState.error!, style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold)),
               ],
               
               if (isLogin) ...[
@@ -91,7 +103,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               SizedBox(
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: ref.watch(authProvider).isLoading ? null : () async {
+                   onPressed: authState.isLoading ? null : () async {
                       bool success = false;
                       if (isLogin) {
                         success = await ref.read(authProvider.notifier).login(emailCtrl.text, passwordCtrl.text);
@@ -109,7 +121,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     backgroundColor: AppTheme.navyDark, // Dark mood action
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: ref.watch(authProvider).isLoading 
+                  child: authState.isLoading 
                       ? const CircularProgressIndicator(color: Colors.white)
                       : Text(isLogin ? 'Sign In' : 'Sign Up', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                 ),
@@ -131,16 +143,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               // Social Auth
               Row(
                 children: [
-                  Expanded(child: _buildSocialBtn('Google', Ionicons.logo_google, AppTheme.primaryRed, onTap: () async {
-                      final success = await ref.read(authProvider.notifier).loginWithGoogle();
-                      if (success && mounted) {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (context) => const MainScreen()),
-                        );
-                      }
-                  })),
-                  const SizedBox(width: 16),
-                  Expanded(child: _buildSocialBtn('Apple', Ionicons.logo_apple, AppTheme.navyDark, onTap: () {})),
+                   Expanded(
+                    child: kIsWeb 
+                      ? (authState.isInitialized 
+                          ? Center(child: googleSignInButton()) 
+                          : const Center(child: SizedBox(height: 40, width: 40, child: CircularProgressIndicator(strokeWidth: 2))))
+                      : _buildSocialBtn('Google', Ionicons.logo_google, AppTheme.primaryRed, onTap: () async {
+                          final success = await ref.read(authProvider.notifier).loginWithGoogle();
+                          if (success && mounted) {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (context) => const MainScreen()),
+                            );
+                          }
+                      }),
+                  ),
                 ],
               ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
               

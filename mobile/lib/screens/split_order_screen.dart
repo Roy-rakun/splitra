@@ -8,6 +8,7 @@ import 'package:splitra_lst/services/api_service.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:splitra_lst/screens/shared_bill_screen.dart';
+import 'package:splitra_lst/utils/formatters.dart';
 class SplitOrderScreen extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>>? scannedItems;
   final double? tax;
@@ -27,6 +28,7 @@ class _SplitOrderScreenState extends ConsumerState<SplitOrderScreen> {
 
   List<dynamic> _myFriends = [];
   List<Map<String, dynamic>> items = [];
+  int selectedParticipantIndex = 0;
 
   @override
   void initState() {
@@ -185,7 +187,97 @@ class _SplitOrderScreenState extends ConsumerState<SplitOrderScreen> {
     );
   }
 
-  int selectedParticipantIndex = 0;
+  double get subtotal => items.fold(0, (sum, item) => sum + (item['qty'] * item['price']));
+  double get grandTotal => subtotal + (widget.tax ?? 0) + (widget.serviceCharge ?? 0);
+  bool _isLoading = false;
+
+  Future<void> _saveBill() async {
+    setState(() => _isLoading = true);
+    
+    final List<Map<String, dynamic>> finalParticipants = [];
+    final List<Map<String, dynamic>> finalSettlements = [];
+    
+    // 1. Hitung Subtotal per Partisipan
+    final Map<int, double> participantSubtotals = {};
+    for (int i = 0; i < participants.length; i++) {
+        participantSubtotals[i] = 0.0;
+    }
+
+    for (final item in items) {
+        final selectedBy = (item['selectedBy'] as List);
+        if (selectedBy.isNotEmpty) {
+            double pricePerPerson = (item['price'] * item['qty']) / selectedBy.length;
+            for (final pIndex in selectedBy) {
+                participantSubtotals[pIndex] = (participantSubtotals[pIndex] ?? 0.0) + pricePerPerson;
+            }
+        }
+    }
+
+    // 2. Pro-rate Tax & Service charge
+    double totalTax = widget.tax ?? 0.0;
+    double totalService = widget.serviceCharge ?? 0.0;
+
+    for (int i = 0; i < participants.length; i++) {
+        final p = participants[i];
+        double pSubtotal = participantSubtotals[i] ?? 0.0;
+        
+        // Proporsi dari total subtotal
+        double ratio = subtotal > 0 ? pSubtotal / subtotal : 0;
+        double pTaxShare = totalTax * ratio;
+        double pServiceShare = totalService * ratio;
+        double pTotal = pSubtotal + pTaxShare + pServiceShare;
+
+        finalParticipants.add({
+            'name': p['name'],
+            'user_id': p['user_id'],
+            'email': p['email'],
+            'telegram_id': p['telegram_id'],
+            'is_owner': i == 0, // Me (Owner) selalu index 0
+            'temp_id': p['name'], // ID penanda untuk mapping settlement di backend
+        });
+
+        // Tentukan siapa yang berhutang (Bukan Owner)
+        if (i != 0 && pTotal > 0) {
+            finalSettlements.add({
+                'payer_name': p['name'],
+                'amount': pTotal,
+                'tax_service_share': pTaxShare + pServiceShare,
+            });
+        }
+    }
+
+    try {
+      final response = await ApiService.post('/bills', {
+        'merchant_name': widget.scannedItems != null && widget.scannedItems!.isNotEmpty ? 'Receipt Split' : 'Manual Split',
+        'subtotal': subtotal,
+        'tax': totalTax,
+        'service_charge': totalService,
+        'total': grandTotal,
+        'items': items, // Kirim semua item asli juga
+        'participants': finalParticipants,
+        'settlements': finalSettlements,
+      });
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (c) => SharedBillScreen(billData: data['data'])),
+          );
+        } else {
+          final data = jsonDecode(response.body);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? "Gagal menyimpan tagihan")));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +304,9 @@ class _SplitOrderScreenState extends ConsumerState<SplitOrderScreen> {
           ),
         ),
       ),
-      body: Column(
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryPink))
+        : Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
@@ -370,7 +464,7 @@ class _SplitOrderScreenState extends ConsumerState<SplitOrderScreen> {
                   ),
                 ),
                 Text(
-                  '\$${item['price'].toStringAsFixed(2)}',
+                  CurrencyFormatter.format(item['price']),
                   style: GoogleFonts.inter(color: AppTheme.greyText, fontSize: 14),
                 ),
                 const SizedBox(width: 12),
@@ -403,12 +497,7 @@ class _SplitOrderScreenState extends ConsumerState<SplitOrderScreen> {
       ),
       child: SafeArea(
         child: ElevatedButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (c) => SharedBillScreen()),
-            );
-          },
+          onPressed: _isLoading ? null : _saveBill,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.primaryPink,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

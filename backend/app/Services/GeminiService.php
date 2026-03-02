@@ -2,10 +2,8 @@
 
 namespace App\Services;
 
-use GeminiAPI\Client;
-use GeminiAPI\Resources\Parts\TextPart;
-use GeminiAPI\Enums\Role;
-use GeminiAPI\Resources\Message;
+use Gemini;
+use Gemini\Enums\Role;
 
 class GeminiService
 {
@@ -20,7 +18,7 @@ class GeminiService
             throw new \Exception("GEMINI_API_KEY is not set in DB Settings nor environment variables");
         }
         
-        $this->client = new Client($apiKey);
+        $this->client = Gemini::client($apiKey);
     }
 
     /**
@@ -50,9 +48,7 @@ Structure required:
 OCR Text:
 " . $ocrText;
 
-        $response = $this->client->geminiPro()->generateContent(
-            new TextPart($prompt)
-        );
+        $response = $this->client->generativeModel('gemini-2.5-flash')->generateContent($prompt);
 
         return $response->text();
     }
@@ -67,9 +63,7 @@ OCR Text:
 Identify any potential errors or unusual items. Suggest 1-2 improvements in Indonesian. 
 Keep it very short (max 150 chars). Example: 'Sepertinya item [X] harganya terlalu tinggi, cek kembali?'";
 
-        $response = $this->client->geminiPro()->generateContent(
-                new TextPart($prompt)
-        );
+        $response = $this->client->generativeModel('gemini-2.5-flash')->generateContent($prompt);
 
         return $response->text();
     }
@@ -90,9 +84,7 @@ Return ONLY valid JSON with structure:
   \"category\": string
 }";
 
-        $response = $this->client->geminiPro()->generateContent(
-            new TextPart($prompt)
-        );
+        $response = $this->client->generativeModel('gemini-2.5-flash')->generateContent($prompt);
 
         $jsonCleaned = trim($response->text());
         if (str_starts_with($jsonCleaned, '```json')) {
@@ -130,9 +122,7 @@ Return ONLY valid JSON with structure:
 
         $prompt = ($prompts[$level] ?? $prompts['basic']) . " Result should be friendly and natural. Don't use JSON.";
 
-        $response = $this->client->geminiPro()->generateContent(
-            new TextPart($prompt)
-        );
+        $response = $this->client->generativeModel('gemini-2.5-flash')->generateContent($prompt);
 
         return $response->text();
     }
@@ -155,9 +145,7 @@ Context: {$debtorName} belum bayar hutang Split Bill '{$billName}' sebesar Rp " 
 Tone: {$toneStyle}
 Result should be just the message text (including standard {$platform} layout if Email with Subject, or simple text if Telegram), ready to copy-paste. No extra commentary.";
 
-        $response = $this->client->geminiPro()->generateContent(
-            new TextPart($prompt)
-        );
+        $response = $this->client->generativeModel('gemini-2.5-flash')->generateContent($prompt);
 
         return $response->text();
     }

@@ -9,6 +9,7 @@ import 'recent_activity_screen.dart'; // Bills Tab
 import 'expense_dashboard_screen.dart'; // Expense Tab
 import 'profile_screen.dart'; // Profile Tab
 import 'scanner_screen.dart'; // FAB Action
+import 'add_expense_screen.dart'; // Manual Expense Action
 
 class MainScreen extends StatefulWidget {
   const MainScreen({Key? key}) : super(key: key);
@@ -147,6 +148,18 @@ class _MainScreenState extends State<MainScreen> {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const ScannerScreen(isPersonalExpense: true)));
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildScanOption(
+              context,
+              icon: Ionicons.create_outline,
+              title: "Input Manual",
+              desc: "Catat pengeluaran tanpa scan struk",
+              color: Colors.green.shade600,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const AddExpenseScreen()));
               },
             ),
             const SizedBox(height: 24),

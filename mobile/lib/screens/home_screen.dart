@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:splitra_lst/providers/auth_provider.dart';
 
 import 'package:splitra_lst/services/api_service.dart';
+import 'package:splitra_lst/utils/formatters.dart';
 import 'dart:convert';
 import 'package:splitra_lst/screens/scanner_screen.dart';
 import 'package:splitra_lst/screens/recent_activity_screen.dart';
@@ -22,11 +23,38 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String insightText = "Memuat ringkasan cerdas pengeluaran kamu...";
+  double _balance = 0.0;
+  List<dynamic> _recentBills = [];
+  bool _isLoadingDashboard = true;
 
   @override
   void initState() {
     super.initState();
     _loadInsight();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    try {
+      final response = await ApiService.get('/dashboard/summary');
+      final activityResponse = await ApiService.get('/dashboard/activity');
+      
+      if (mounted) {
+        setState(() {
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body)['data'];
+            _balance = (data['balance'] ?? 0).toDouble();
+          }
+          if (activityResponse.statusCode == 200) {
+             _recentBills = jsonDecode(activityResponse.body)['data'];
+          }
+          _isLoadingDashboard = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Dashboard error: $e");
+      if (mounted) setState(() => _isLoadingDashboard = false);
+    }
   }
 
   Future<void> _loadInsight() async {
@@ -171,10 +199,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '\$13,470.00',
+            CurrencyFormatter.format(_balance),
             style: GoogleFonts.inter(
               color: AppTheme.navyDark,
-              fontSize: 40,
+              fontSize: 32,
               fontWeight: FontWeight.w800,
               letterSpacing: -1,
             ),
@@ -196,7 +224,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             fontWeight: FontWeight.w800,
           ),
         ),
-        if (!isFree)
+        if (_recentBills.isNotEmpty)
         InkWell(
           onTap: () {
             Navigator.push(
@@ -218,7 +246,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildRecentBillingCard({bool isFree = false}) {
-    if (isFree) {
+    if (_isLoadingDashboard) {
+       return const Center(child: CircularProgressIndicator(color: AppTheme.primaryPink));
+    }
+
+    if (_recentBills.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(24),
@@ -229,15 +261,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         child: Column(
           children: [
-            Icon(Ionicons.cloud_offline_outline, color: Colors.grey.shade400, size: 48),
+            Icon(Ionicons.receipt_outline, color: Colors.grey.shade400, size: 48),
             const SizedBox(height: 16),
             Text(
-              "No history for Free User",
+              "No recent bills found",
               style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.navyDark),
             ),
             const SizedBox(height: 8),
             Text(
-              "Log in to keep track of your split bills and never forget a debt again.",
+              "Scan your first receipt to start tracking split bills.",
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(color: AppTheme.greyText, fontSize: 13),
             ),
@@ -245,6 +277,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
     }
+    
+    final bill = _recentBills.first;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -265,7 +299,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'CFC Sukabumi',
+                bill['merchant_name'] ?? 'Untitled Bill',
                 style: GoogleFonts.inter(
                   color: AppTheme.navyDark,
                   fontSize: 16,
@@ -288,7 +322,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               Text(
-                '\$ 43.27',
+                CurrencyFormatter.format(bill['total']),
                 style: GoogleFonts.inter(
                   color: AppTheme.navyDark,
                   fontSize: 24,
@@ -309,7 +343,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               Text(
-                '4 persons',
+                '${(bill['participants'] as List).length} persons',
                 style: GoogleFonts.inter(
                   color: AppTheme.greyText,
                   fontSize: 12,
@@ -323,10 +357,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             height: 40,
             child: Stack(
               children: [
-                _buildAvatarStack(0, 'https://i.pravatar.cc/150?u=1'),
-                _buildAvatarStack(25, 'https://i.pravatar.cc/150?u=2'),
-                _buildAvatarStack(50, 'https://i.pravatar.cc/150?u=3'),
-                _buildAvatarStack(75, 'https://i.pravatar.cc/150?u=4'),
+                ...(bill['participants'] as List).take(4).asMap().entries.map((entry) {
+                   return _buildAvatarStack(entry.key * 25.0, 'https://ui-avatars.com/api/?name=${entry.value['name']}&background=random');
+                }).toList(),
+                if ((bill['participants'] as List).length > 4)
                 Positioned(
                   left: 100,
                   child: Container(
@@ -335,15 +369,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
-                      color: Colors.white,
+                      color: Colors.grey.shade200,
                     ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppTheme.successGreen, width: 1),
-                      ),
-                      child: const Icon(Icons.add, color: AppTheme.successGreen, size: 20),
-                    ),
+                    child: Center(child: Text('+${(bill['participants'] as List).length - 4}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
                   ),
                 ),
               ],
@@ -353,7 +381,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                 // Navigate to detail
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.successGreen,
                 shape: RoundedRectangleBorder(

@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   // Ganti baseUrl sesuai environment (contoh Laragon custom domain atau localhost)
   // 10.0.2.2 untuk Android Emulator mengakses localhost komputer
-  static const String baseUrl = 'https://splitra.web.id/api'; 
+  static const String baseUrl = 'http://localhost:8000/api'; 
   
   static Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();

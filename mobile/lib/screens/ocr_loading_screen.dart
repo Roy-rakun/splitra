@@ -56,7 +56,7 @@ class _OcrLoadingScreenState extends State<OcrLoadingScreen> {
           final resData = jsonDecode(response.body);
           aiParsedData = resData['data'];
       } else {
-          debugPrint("Failed to parse OCR: \${response.body}");
+          debugPrint("Failed to parse OCR: ${response.body}");
       }
     } catch (e) {
       debugPrint("Error contacting Parse API: \$e");

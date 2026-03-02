@@ -4,6 +4,9 @@ import 'package:ionicons/ionicons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:splitra_lst/utils/theme.dart';
 import 'package:splitra_lst/services/notification_service.dart';
+import 'package:splitra_lst/services/api_service.dart';
+import 'package:splitra_lst/utils/formatters.dart';
+import 'dart:convert';
 
 class RecentActivityScreen extends StatefulWidget {
   const RecentActivityScreen({Key? key}) : super(key: key);
@@ -14,11 +17,33 @@ class RecentActivityScreen extends StatefulWidget {
 
 class _RecentActivityScreenState extends State<RecentActivityScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  List<dynamic> _allBills = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadBills();
+  }
+
+  Future<void> _loadBills() async {
+    try {
+      final response = await ApiService.get('/bills');
+      if (response.statusCode == 200) {
+        if (mounted) {
+          setState(() {
+            _allBills = jsonDecode(response.body)['data'];
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      debugPrint("Load bills error: $e");
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -104,25 +129,53 @@ class _RecentActivityScreenState extends State<RecentActivityScreen> with Single
   }
 
   Widget _buildListTab(String type) {
-    // Dummy Data
-    final bills = [
-      {'name': 'KFC Cafe', 'date': '10 Dec, 2022', 'time': '09:30', 'amount': '\$ 61.43', 'progress': 0.75, 'logo': 'KFC'},
-      {'name': 'McD Sudirman', 'date': '10 Dec, 2022', 'time': '09:30', 'amount': '\$ 61.43', 'progress': 0.50, 'logo': 'McD'},
-      {'name': 'Costa Coffee', 'date': '10 Dec, 2022', 'time': '09:30', 'amount': '\$ 61.43', 'progress': 0.75, 'logo': 'Costa'},
-      {'name': 'Burger King', 'date': '10 Dec, 2022', 'time': '09:30', 'amount': '\$ 61.43', 'progress': 0.65, 'logo': 'BK'},
-    ];
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: AppTheme.primaryPink));
+    }
+
+    // Filter data berdasarkan tipe tab
+    final filteredBills = _allBills.where((bill) {
+      if (type == 'completed') {
+        // Anggap lunas jika tidak ada settlement pending
+        final settlements = bill['settlements'] as List? ?? [];
+        return settlements.isNotEmpty && settlements.every((s) => s['status'] == 'Paid');
+      } else if (type == 'unfinished') {
+        final settlements = bill['settlements'] as List? ?? [];
+        return settlements.any((s) => s['status'] == 'Pending');
+      }
+      return true; // 'recent'
+    }).toList();
+
+    if (filteredBills.isEmpty) {
+      return Center(child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Ionicons.receipt_outline, color: Colors.grey.shade300, size: 64),
+          const SizedBox(height: 16),
+          Text("Gak ada tagihan di sini", style: GoogleFonts.inter(color: AppTheme.greyText)),
+        ],
+      ));
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      itemCount: bills.length,
+      itemCount: filteredBills.length,
       itemBuilder: (context, index) {
-        final item = bills[index];
+        final item = filteredBills[index];
         return _buildListItem(item).animate().fadeIn(delay: Duration(milliseconds: 100 * index)).slideX();
       },
     );
   }
 
   Widget _buildListItem(Map<String, dynamic> item) {
+    // Hitung progress settlement
+    final settlements = item['settlements'] as List? ?? [];
+    double progress = 0;
+    if (settlements.isNotEmpty) {
+      int paidCount = settlements.where((s) => s['status'] == 'Paid').length;
+      progress = paidCount / settlements.length;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -144,8 +197,8 @@ class _RecentActivityScreenState extends State<RecentActivityScreen> with Single
             radius: 24,
             backgroundColor: Colors.grey.shade100,
             child: Text(
-              (item['logo'] as String).substring(0, 1),
-              style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold),
+              (item['merchant_name'] as String? ?? "B").substring(0, 1),
+              style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 16),
@@ -155,12 +208,12 @@ class _RecentActivityScreenState extends State<RecentActivityScreen> with Single
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item['name'],
+                  item['merchant_name'] ?? 'Untitled',
                   style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.navyDark, fontSize: 16),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${item['date']} | ${item['time']}',
+                  item['created_at'] != null ? item['created_at'].toString().split('T')[0] : 'No date',
                   style: GoogleFonts.inter(color: AppTheme.greyText, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
@@ -169,9 +222,10 @@ class _RecentActivityScreenState extends State<RecentActivityScreen> with Single
                   width: double.infinity,
                   child: Stack(
                     children: [
-                       _buildAvatar(0, 'https://i.pravatar.cc/150?u=${item['name']}1'),
-                       _buildAvatar(15, 'https://i.pravatar.cc/150?u=${item['name']}2'),
-                       _buildAvatar(30, 'https://i.pravatar.cc/150?u=${item['name']}3'),
+                       ...(item['participants'] as List? ?? []).take(3).asMap().entries.map((entry) {
+                         return _buildAvatar(entry.key * 15.0, 'https://ui-avatars.com/api/?name=${entry.value['name']}&background=random'
+);
+                       }).toList(),
                     ],
                   ),
                 )
@@ -183,7 +237,7 @@ class _RecentActivityScreenState extends State<RecentActivityScreen> with Single
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                item['amount'],
+                CurrencyFormatter.format(item['total']),
                 style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.navyDark),
               ),
               const SizedBox(height: 8),
@@ -194,14 +248,14 @@ class _RecentActivityScreenState extends State<RecentActivityScreen> with Single
                     height: 40,
                     width: 40,
                     child: CircularProgressIndicator(
-                      value: item['progress'],
+                      value: progress,
                       color: AppTheme.successGreen,
                       backgroundColor: Colors.grey.shade200,
                       strokeWidth: 4,
                     ),
                   ),
                   Text(
-                    '${(item['progress'] * 100).toInt()}%',
+                    '${(progress * 100).toInt()}%',
                     style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.greyText),
                   )
                 ],

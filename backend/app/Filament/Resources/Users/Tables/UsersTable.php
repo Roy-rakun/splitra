@@ -27,6 +27,9 @@ class UsersTable
                     ->color(fn (string $state): string => match ($state) {
                         'Premium' => 'warning',
                         'Group' => 'success',
+                        'Lifetime' => 'info',
+                        'B2B' => 'primary',
+                        'White Label' => 'danger',
                         default => 'gray',
                     }),
                 TextColumn::make('status')

@@ -28,7 +28,14 @@ class UserForm
                     ->relationship('roles', 'name')
                     ->preload(),
                 \Filament\Forms\Components\Select::make('plan')
-                    ->options(['Free' => 'Free', 'Premium' => 'Premium', 'Group' => 'Group'])
+                    ->options([
+                        'Free' => 'Free',
+                        'Lifetime' => 'Lifetime',
+                        'Premium' => 'Premium',
+                        'Group' => 'Group',
+                        'B2B' => 'B2B',
+                        'White Label' => 'White Label',
+                    ])
                     ->default('Free')
                     ->required(),
                 \Filament\Forms\Components\Select::make('status')

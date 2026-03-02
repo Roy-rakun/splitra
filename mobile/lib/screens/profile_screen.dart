@@ -8,6 +8,10 @@ import 'package:image_picker/image_picker.dart';
 import 'pricing_screen.dart';
 import '../providers/auth_provider.dart';
 import 'auth_screen.dart';
+import 'change_password_screen.dart';
+import 'faq_screen.dart';
+import 'app_settings_screen.dart';
+import 'export_data_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -48,7 +52,7 @@ class ProfileScreen extends ConsumerWidget {
                         backgroundColor: Colors.grey.shade200,
                         backgroundImage: user?['avatar_url'] != null 
                             ? NetworkImage(user!['avatar_url']) 
-                            : const NetworkImage('https://ui-avatars.com/api/?name=User&background=random'),
+                            : NetworkImage('https://ui-avatars.com/api/?name=User&background=random'),
                       ),
                       if (ref.watch(authProvider).isLoading)
                         const CircularProgressIndicator(color: AppTheme.primaryPink),
@@ -110,14 +114,35 @@ class ProfileScreen extends ConsumerWidget {
           Text("Settings", style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.navyDark)),
           const SizedBox(height: 16),
           
-          _buildMenuTile(Ionicons.settings_outline, "App Settings"),
-          _buildMenuTile(Ionicons.wallet_outline, "Payment Details", onTap: () => _showPaymentMethodsDialog(context, ref)),
-          _buildMenuTile(Ionicons.notifications_outline, "Notifications"),
-          _buildMenuTile(Ionicons.help_circle_outline, "Help & FAQ"),
-          _buildMenuTile(Ionicons.document_text_outline, "Export Data"),
+          _buildMenuTile(
+            Ionicons.settings_outline, 
+            "Pengaturan Aplikasi", 
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AppSettingsScreen())),
+          ),
+          _buildMenuTile(Ionicons.wallet_outline, "Detail Pembayaran", onTap: () => _showPaymentMethodsDialog(context, ref)),
+          _buildMenuTile(
+            Ionicons.notifications_outline, 
+            "Notifikasi",
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => AppSettingsScreen())), // Shared for now
+          ),
+          _buildMenuTile(
+            Ionicons.lock_closed_outline, 
+            "Ganti Kata Sandi",
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ChangePasswordScreen())),
+          ),
+          _buildMenuTile(
+            Ionicons.help_circle_outline, 
+            "Bantuan & FAQ",
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => FaqScreen())),
+          ),
+          _buildMenuTile(
+            Ionicons.document_text_outline, 
+            "Ekspor Data",
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ExportDataScreen())),
+          ),
           
           const SizedBox(height: 24),
-          _buildMenuTile(Ionicons.log_out_outline, "Log Out", iconColor: AppTheme.primaryRed, textColor: AppTheme.primaryRed, onTap: () async {
+          _buildMenuTile(Ionicons.log_out_outline, "Keluar", iconColor: AppTheme.primaryRed, textColor: AppTheme.primaryRed, onTap: () async {
              await ref.read(authProvider.notifier).logout();
              if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(

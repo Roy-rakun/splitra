@@ -17,6 +17,60 @@ class ExpenseController extends Controller
         $this->geminiService = $geminiService;
     }
 
+    public function index(Request $request)
+    {
+        $expenses = Expense::where('user_id', $request->user()->id)
+            ->with('category')
+            ->orderBy('expense_date', 'desc')
+            ->get();
+
+        return response()->json([
+            'message' => 'Berhasil mengambil daftar pengeluaran',
+            'data' => $expenses
+        ]);
+    }
+
+    public function stats(Request $request)
+    {
+        $user = $request->user();
+        $range = $request->query('range', 'weekly'); // daily, weekly, monthly
+
+        $query = Expense::where('user_id', $user->id);
+
+        if ($range === 'weekly') {
+            $query->where('expense_date', '>=', now()->startOfWeek());
+        } elseif ($range === 'monthly') {
+            $query->where('expense_date', '>=', now()->startOfMonth());
+        }
+
+        $expenses = $query->get();
+
+        // Group by Category
+        $byCategory = $expenses->groupBy('category_id')->map(function ($items) {
+            return [
+                'category_name' => $items->first()->category->name ?? 'Other',
+                'amount' => $items->sum('amount'),
+                'count' => $items->count(),
+            ];
+        })->values();
+
+        // Group by Date for Chart
+        $byDate = $expenses->groupBy(function($item) {
+            return Carbon::parse($item->expense_date)->format('D');
+        })->map(function ($items) {
+            return $items->sum('amount');
+        });
+
+        return response()->json([
+            'message' => 'Berhasil mengambil statistik pengeluaran',
+            'data' => [
+                'total' => $expenses->sum('amount'),
+                'by_category' => $byCategory,
+                'chart_data' => $byDate, // e.g. {"Mon": 100, "Tue": 50}
+            ]
+        ]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([

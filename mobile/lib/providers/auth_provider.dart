@@ -3,27 +3,30 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../services/api_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:splitra_lst/services/api_service.dart';
 
 class AuthState {
   final bool isLoading;
   final Map<String, dynamic>? user;
   final String? error;
+  final bool isInitialized;
 
-  AuthState({this.isLoading = false, this.user, this.error});
+  AuthState({this.isLoading = false, this.user, this.error, this.isInitialized = false});
 
-  AuthState copyWith({bool? isLoading, Map<String, dynamic>? user, String? error, bool clearError = false}) {
+  AuthState copyWith({bool? isLoading, Map<String, dynamic>? user, String? error, bool clearError = false, bool? isInitialized}) {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
       user: user ?? this.user,
       error: clearError ? null : (error ?? this.error),
+      isInitialized: isInitialized ?? this.isInitialized,
     );
   }
 }
 
 class AuthNotifier extends Notifier<AuthState> {
-  // Definitive singleton usage for google_sign_in 7.2.0
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  bool _isInitialized = false;
 
   @override
   AuthState build() {
@@ -32,13 +35,44 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> _initAndLoad() async {
+    if (_isInitialized) return;
     try {
-      // Inisialisasi wajib untuk v7.2+
-      await _googleSignIn.initialize();
+      // 1. Ambil Settings dari Backend secara dinamis
+      final settingsResponse = await ApiService.get('/settings/public').timeout(const Duration(seconds: 10));
+      
+      String? clientId;
+      if (settingsResponse.statusCode == 200) {
+        final settingsData = jsonDecode(settingsResponse.body);
+        clientId = settingsData['google_client_id']?.toString();
+      }
+
+      // 2. Inisialisasi wajib untuk v7.2+
+      if (kIsWeb && (clientId == null || clientId.isEmpty)) {
+        debugPrint('Error: Google Client ID is missing for Web. Please check backend settings.');
+      }
+
+      await _googleSignIn.initialize(
+        clientId: kIsWeb ? clientId : null,
+      );
+      
+      _isInitialized = true;
+      state = state.copyWith(isInitialized: true);
+      debugPrint('Google Sign-In diinisialisasi dengan Client ID: $clientId');
+
+      // 3. Listen to authentication events
+      _googleSignIn.authenticationEvents.listen((event) {
+        if (event is GoogleSignInAuthenticationEventSignIn) {
+          _handleGoogleSignInEvent(event.user);
+        }
+      }, onError: (error) {
+        debugPrint('Auth Stream Error: $error');
+      });
+      
       await _loadUser();
     } catch (e) {
-      debugPrint('Error init auth: $e');
-      await _loadUser();
+      debugPrint('CRITICAL: Error during auth init: $e');
+      // Jangan set isInitialized: true jika gagal, biar UI tetap loading/tampil error
+      state = state.copyWith(isLoading: false, error: 'Gagal inisialisasi Google Auth: $e');
     }
   }
 
@@ -88,17 +122,54 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  Future<void> _handleGoogleSignInEvent(GoogleSignInAccount googleAccount) async {
+    try {
+      state = state.copyWith(isLoading: true, clearError: true);
+      
+      final auth = await googleAccount.authentication;
+      final idToken = auth.idToken;
+
+      // Di v7.x, accessToken didapat via authorizationClient
+      final authClient = await googleAccount.authorizationClient.authorizationForScopes([]);
+      final accessToken = authClient?.accessToken;
+
+      final response = await ApiService.post('/auth/google', {
+        if (accessToken != null) 'access_token': accessToken,
+        if (idToken != null) 'id_token': idToken,
+      });
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final token = data['token'];
+        
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_token', token);
+        
+        state = state.copyWith(isLoading: false, user: data['user']);
+        debugPrint('Login Google Event Berhasil');
+      } else {
+        final data = jsonDecode(response.body);
+        state = state.copyWith(isLoading: false, error: data['message'] ?? 'Login Google Gagal');
+      }
+    } catch (e) {
+      debugPrint('Error handling google event: $e');
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
   Future<bool> loginWithGoogle() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      // authenticate() menggantikan signIn() di v7.2+
+      String? accessToken;
+      // Di v7.2.0+, programmatic sign-in di platform apapun disarankan via authenticate()
+      // atau check supportsAuthenticate() dulu.
       final googleAccount = await _googleSignIn.authenticate(
         scopeHint: ['email', 'profile'],
       );
       
       // Ambil accessToken via authorizationClient
       final authz = await googleAccount.authorizationClient.authorizeScopes(['email', 'profile']);
-      final accessToken = authz.accessToken;
+      accessToken = authz.accessToken;
 
       if (accessToken == null) {
         state = state.copyWith(isLoading: false, error: "Gagal mendapatkan access token dari Google");

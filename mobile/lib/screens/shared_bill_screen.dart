@@ -7,9 +7,11 @@ import 'package:splitra_lst/utils/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:splitra_lst/services/api_service.dart';
+import 'package:splitra_lst/utils/formatters.dart';
 
 class SharedBillScreen extends StatefulWidget {
-  const SharedBillScreen({Key? key}) : super(key: key);
+  final Map<String, dynamic>? billData;
+  const SharedBillScreen({Key? key, this.billData}) : super(key: key);
 
   @override
   State<SharedBillScreen> createState() => _SharedBillScreenState();
@@ -29,24 +31,44 @@ class _SharedBillScreenState extends State<SharedBillScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchBillDetails();
+    if (widget.billData != null) {
+      _loadDataFromWidget();
+    } else {
+      _fetchBillDetails();
+    }
+  }
+
+  void _loadDataFromWidget() {
+    setState(() {
+      billData = widget.billData;
+      billItems = billData?['items'] ?? [];
+      // Partisipan pertama biasanya owner atau kita ambil settlement pertama sebagai contoh di layar "Shared" ini
+      if (billData?['settlements'] != null && (billData?['settlements'] as List).isNotEmpty) {
+          mySettlement = billData?['settlements'][0];
+      }
+      ownerPlan = billData?['user']?['plan'] ?? 'free';
+      isLoading = false;
+    });
   }
 
   Future<void> _fetchBillDetails() async {
     try {
-      // Kita asumsikan unique_code didapat dari route/argument
-      // Untuk sementara pakai dummy hit ke endpoint
-      final response = await ApiService.get('/shared-bill/dummy_code_123'); 
+      // Fallback for direct navigation / testing
+      final response = await ApiService.get('/dashboard/activity'); 
       if (response.statusCode == 200) {
         final res = jsonDecode(response.body);
-        final bill = res['bill'];
-        setState(() {
-          billData = bill;
-          billItems = bill['items'] ?? [];
-          mySettlement = res['my_settlement'];
-          ownerPlan = bill['owner_plan'] ?? 'free';
-          isLoading = false;
-        });
+        if (res['data'] != null && (res['data'] as List).isNotEmpty) {
+           final bill = res['data'][0];
+           setState(() {
+             billData = bill;
+             billItems = bill['items'] ?? [];
+             if (bill['settlements'] != null && (bill['settlements'] as List).isNotEmpty) {
+                mySettlement = bill['settlements'][0];
+             }
+             ownerPlan = bill['user']?['plan'] ?? 'free';
+             isLoading = false;
+           });
+        }
       }
     } catch (e) {
       debugPrint("Error fetch bill: $e");
@@ -162,9 +184,9 @@ class _SharedBillScreenState extends State<SharedBillScreen> {
                       ],
                       
                       const SizedBox(height: 16),
-                      Text("You owe ${billData?['user']?['name'] ?? 'Bella'}", style: GoogleFonts.inter(color: AppTheme.greyText, fontSize: 16)),
+                      Text("Total tagihan kamu", style: GoogleFonts.inter(color: AppTheme.greyText, fontSize: 16)),
                       const SizedBox(height: 8),
-                      Text("\$ ${mySettlement?['amount'] ?? '0.00'}", style: GoogleFonts.inter(color: AppTheme.navyDark, fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -2))
+                      Text(CurrencyFormatter.format(mySettlement?['amount']), style: GoogleFonts.inter(color: AppTheme.navyDark, fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -2))
                         .animate().fadeIn(delay: 200.ms).scaleXY(begin: 0.8, end: 1),
                         
                       const SizedBox(height: 32),
@@ -189,8 +211,8 @@ class _SharedBillScreenState extends State<SharedBillScreen> {
                                    child: Column(
                                      crossAxisAlignment: CrossAxisAlignment.start,
                                      children: [
-                                       Text(billData?['title'] ?? "Starbuck Coffee", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.navyDark)),
-                                       Text("${billData?['created_at']?.toString().split('T')[0] ?? '10 Dec 2022'}", style: GoogleFonts.inter(fontSize: 12, color: AppTheme.greyText)),
+                                       Text(billData?['merchant_name'] ?? "Tagihan Resto", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.navyDark)),
+                                       Text("${billData?['created_at']?.toString().split('T')[0] ?? 'Baru saja'}", style: GoogleFonts.inter(fontSize: 12, color: AppTheme.greyText)),
                                      ],
                                    ),
                                  ),
@@ -199,17 +221,17 @@ class _SharedBillScreenState extends State<SharedBillScreen> {
                              const SizedBox(height: 24),
                              const Divider(height: 1),
                              const SizedBox(height: 24),
-                             Text("Your Items", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.navyDark)),
+                             Text("Item Kamu", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.navyDark)),
                              const SizedBox(height: 16),
                              if (billItems.isEmpty) 
-                               Text("Tidak ada detail item yang terlihat (Privasi)", style: GoogleFonts.inter(fontSize: 12, color: AppTheme.greyText, fontStyle: FontStyle.italic)),
+                               Text("Detail item tersimpan di sistem.", style: GoogleFonts.inter(fontSize: 12, color: AppTheme.greyText, fontStyle: FontStyle.italic)),
                              ...billItems.map((item) => _buildReceiptRow(
                                item['name'] ?? 'Item', 
                                "${item['qty'] ?? 1}x", 
-                               item['price'] != null ? "\$${item['price']}" : "Hidden"
+                               CurrencyFormatter.format(item['price'])
                              )).toList(),
                              const SizedBox(height: 16),
-                             _buildReceiptRow("Tax & Fees (Pro-rated)", "", "\$${mySettlement?['tax_service_share'] ?? '0.00'}", isFaint: true),
+                             _buildReceiptRow("Pajak & Layanan (Proporsional)", "", CurrencyFormatter.format(mySettlement?['tax_service_share']), isFaint: true),
                           ],
                         ),
                       ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
@@ -220,6 +242,53 @@ class _SharedBillScreenState extends State<SharedBillScreen> {
                       if (ownerPlan != 'free') // Asumsi admin/pembuat melihat tagihan Unpaid
                       _buildAIReminderButton(),
                       
+                      const SizedBox(height: 32),
+                      
+                      // Share Links for Participants
+                      if (billData?['participants'] != null)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                           color: AppTheme.primaryPink.withOpacity(0.05),
+                           borderRadius: BorderRadius.circular(24),
+                           border: Border.all(color: AppTheme.primaryPink.withOpacity(0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Bagikan Link Patungan", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.navyDark)),
+                            const SizedBox(height: 4),
+                            Text("Kirim link unik ini ke masing-masing teman lo untuk bayar.", style: GoogleFonts.inter(fontSize: 12, color: AppTheme.greyText)),
+                            const SizedBox(height: 16),
+                            ...(billData?['participants'] as List).map((p) {
+                               final url = "http://localhost:8080/#/shared-bill/${p['unique_code']}";
+                               return Padding(
+                                 padding: const EdgeInsets.only(bottom: 12.0),
+                                 child: Row(
+                                   children: [
+                                     CircleAvatar(radius: 14, backgroundImage: NetworkImage('https://ui-avatars.com/api/?name=${p['name']}')),
+                                     const SizedBox(width: 12),
+                                     Expanded(child: Text(p['name'], style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13))),
+                                     TextButton.icon(
+                                       onPressed: () {
+                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Link ${p['name']} disalin!"), backgroundColor: AppTheme.successGreen));
+                                       },
+                                       icon: const Icon(Ionicons.copy_outline, size: 14),
+                                       label: const Text("Salin", style: TextStyle(fontSize: 12)),
+                                     ),
+                                     IconButton(
+                                       onPressed: () {},
+                                       icon: const Icon(Ionicons.logo_whatsapp, color: Colors.green, size: 20),
+                                     )
+                                   ],
+                                 ),
+                               );
+                            }).toList(),
+                          ],
+                        ),
+                      ).animate().fadeIn(delay: 450.ms),
+
                       const SizedBox(height: 32),
                       
                       // Payment Instructions
@@ -233,10 +302,10 @@ class _SharedBillScreenState extends State<SharedBillScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Payment Instruction", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.navyDark)),
+                            Text("Instruksi Pembayaran", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.navyDark)),
                             const SizedBox(height: 16),
-                            if (billData?['payment_methods'] != null && (billData?['payment_methods'] as List).isNotEmpty)
-                              ... (billData?['payment_methods'] as List).map((m) => Padding(
+                            if (billData?['user']?['payment_methods'] != null && (billData?['user']?['payment_methods'] as List).isNotEmpty)
+                              ... (billData?['user']?['payment_methods'] as List).map((m) => Padding(
                                 padding: const EdgeInsets.only(bottom: 12.0),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -244,7 +313,7 @@ class _SharedBillScreenState extends State<SharedBillScreen> {
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text("${m['provider']} - ${billData?['owner'] ?? 'Owner'}", style: GoogleFonts.inter(color: AppTheme.greyText, fontSize: 12)),
+                                        Text("${m['provider']} - ${billData?['user']?['name'] ?? 'Owner'}", style: GoogleFonts.inter(color: AppTheme.greyText, fontSize: 12)),
                                         const SizedBox(height: 4),
                                         Text("${m['account_number']}", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.navyDark, fontSize: 16, letterSpacing: 2)),
                                         Text("${m['account_holder']}", style: GoogleFonts.inter(color: AppTheme.greyText, fontSize: 11)),
@@ -252,7 +321,7 @@ class _SharedBillScreenState extends State<SharedBillScreen> {
                                     ),
                                     IconButton(
                                       onPressed: () {
-                                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Copied ${m['account_number']} to clipboard!")));
+                                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Berhasil menyalin nomor rekening!")));
                                       }, 
                                       icon: const Icon(Ionicons.copy_outline, color: AppTheme.primaryPink, size: 20)
                                     )
@@ -260,10 +329,10 @@ class _SharedBillScreenState extends State<SharedBillScreen> {
                                 ),
                               )).toList()
                             else
-                              Text("Tanyakan langsung ke ${billData?['owner'] ?? 'Owner'} untuk detail pembayaran.", style: GoogleFonts.inter(color: AppTheme.greyText, fontSize: 12, fontStyle: FontStyle.italic)),
+                              Text("Tanyakan langsung ke ${billData?['user']?['name'] ?? 'Owner'} untuk detail pembayaran.", style: GoogleFonts.inter(color: AppTheme.greyText, fontSize: 12, fontStyle: FontStyle.italic)),
                           ],
                         ),
-                      ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
+                      ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.1),
                       
                     ],
                   ),
